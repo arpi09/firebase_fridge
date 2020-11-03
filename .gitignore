@@ -65,6 +65,6 @@ node_modules/
 # dotenv environment variables file
 .env
 
-functions/fridge-23daa-firebase-adminsdk-3jbx2-d5de51a24d.json
+functions/auth.json
 
 .DS_Store
