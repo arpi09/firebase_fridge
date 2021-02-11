@@ -74,12 +74,12 @@ app.get("/api/user/:userId/fridge/:fridgeId/groceries", (req, res) => {
     if (!req.headers.authorization) {
       return res.status(403).json({ error: "No credentials sent!" });
     }
-    admin
-      .auth()
-      .verifyIdToken(req.headers.authorization)
-      .then((decodedToken) => {
-        const uid = decodedToken.uid;
-        try {
+    try {
+      admin
+        .auth()
+        .verifyIdToken(req.headers.authorization)
+        .then(async (decodedToken) => {
+          const uid = decodedToken.uid;
           let query = db
             .collection("users")
             .doc(req.params.userId)
@@ -100,14 +100,14 @@ app.get("/api/user/:userId/fridge/:fridgeId/groceries", (req, res) => {
             return;
           });
           return res.status(200).send(response);
-        } catch (error) {
-          console.log(error);
-          return res.status(500).send(error);
-        }
-      })
-      .catch((error) => {
-        // Handle error
-      });
+        })
+        .catch((error) => {
+          return res.status(401).json({ error: error });
+        });
+    } catch (error) {
+      console.log(error);
+      return res.status(500).send(error);
+    }
   })();
 });
 
