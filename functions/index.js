@@ -71,31 +71,43 @@ app.get("/api/users", (req, res) => {
 
 app.get("/api/user/:userId/fridge/:fridgeId/groceries", (req, res) => {
   (async () => {
-    try {
-      let query = db
-        .collection("users")
-        .doc(req.params.userId)
-        .collection("fridges")
-        .doc(req.params.fridgeId)
-        .collection("groceries")
-      let response = [];
-      await query.get().then((querySnapshot) => {
-        let docs = querySnapshot.docs;
-        for (let doc of docs) {
-          const selectedItem = {
-            id: doc.id,
-            name: doc.data().name,
-            bestBefore: doc.data().bestBefore.toDate()
-          };
-          response.push(selectedItem);
-        }
-        return;
-      });
-      return res.status(200).send(response);
-    } catch (error) {
-      console.log(error);
-      return res.status(500).send(error);
+    if (!req.headers.authorization) {
+      return res.status(403).json({ error: "No credentials sent!" });
     }
+    admin
+      .auth()
+      .verifyIdToken(req.headers.authorization)
+      .then((decodedToken) => {
+        const uid = decodedToken.uid;
+        try {
+          let query = db
+            .collection("users")
+            .doc(req.params.userId)
+            .collection("fridges")
+            .doc(req.params.fridgeId)
+            .collection("groceries");
+          let response = [];
+          await query.get().then((querySnapshot) => {
+            let docs = querySnapshot.docs;
+            for (let doc of docs) {
+              const selectedItem = {
+                id: doc.id,
+                name: doc.data().name,
+                bestBefore: doc.data().bestBefore.toDate(),
+              };
+              response.push(selectedItem);
+            }
+            return;
+          });
+          return res.status(200).send(response);
+        } catch (error) {
+          console.log(error);
+          return res.status(500).send(error);
+        }
+      })
+      .catch((error) => {
+        // Handle error
+      });
   })();
 });
 
