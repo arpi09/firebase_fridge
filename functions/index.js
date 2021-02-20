@@ -18,12 +18,29 @@ app.get("/hello-world", (req, res) => {
 
 app.post("/api/user", (req, res) => {
   (async () => {
+    if (!req.headers.authorization) {
+      return res.status(403).json({ error: "No credentials sent!" });
+    }
     try {
-      await db
-        .collection("users")
-        .doc("/" + req.body.id + "/")
-        .create({ user: req.body.item });
-      return res.status(200).send();
+      admin
+        .auth()
+        .verifyIdToken(req.headers.authorization)
+        .then(async (decodedToken) => {
+          const uid = decodedToken.uid;
+          try {
+            await db
+              .collection("users")
+              .doc("/" + uid + "/")
+              .create({ user: "hehehe" });
+            return res.status(200).send();
+          } catch (error) {
+            console.log(error);
+            return res.status(500).send(error);
+          }
+        })
+        .catch((error) => {
+          return res.status(401).json({ error: error });
+        });
     } catch (error) {
       console.log(error);
       return res.status(500).send(error);
@@ -69,7 +86,7 @@ app.get("/api/users", (req, res) => {
   })();
 });
 
-app.get("/api/user/:userId/fridge/:fridgeId/groceries", (req, res) => {
+app.get("/api/user/fridge/:fridgeId/groceries", (req, res) => {
   (async () => {
     if (!req.headers.authorization) {
       return res.status(403).json({ error: "No credentials sent!" });
@@ -82,7 +99,7 @@ app.get("/api/user/:userId/fridge/:fridgeId/groceries", (req, res) => {
           const uid = decodedToken.uid;
           let query = db
             .collection("users")
-            .doc(req.params.userId)
+            .doc(uid)
             .collection("fridges")
             .doc(req.params.fridgeId)
             .collection("groceries");
@@ -111,14 +128,74 @@ app.get("/api/user/:userId/fridge/:fridgeId/groceries", (req, res) => {
   })();
 });
 
-app.put("/api/user/:id", (req, res) => {
+app.post("/api/user/fridge/:fridgeId/grocery", (req, res) => {
   (async () => {
+    if (!req.headers.authorization) {
+      return res.status(403).json({ error: "No credentials sent!" });
+    }
     try {
-      const document = db.collection("users").doc(req.params.id);
-      await document.update({
-        user: req.body.user,
-      });
-      return res.status(200).send();
+      admin
+        .auth()
+        .verifyIdToken(req.headers.authorization)
+        .then(async (decodedToken) => {
+          const uid = decodedToken.uid;
+          try {
+            await db
+              .collection("users")
+              .doc(uid)
+              .collection("fridges")
+              .doc(req.params.fridgeId)
+              .collection("groceries")
+              .add({
+                bestBefore: admin.firestore.Timestamp.now(),
+                name: "Meat",
+              });
+            return res.status(200).send();
+          } catch (error) {
+            console.log(error);
+            return res.status(500).send(error);
+          }
+        })
+        .catch((error) => {
+          return res.status(401).json({ error: error });
+        });
+    } catch (error) {
+      console.log(error);
+      return res.status(500).send(error);
+    }
+  })();
+});
+
+app.get("/api/user/fridges", (req, res) => {
+  (async () => {
+    if (!req.headers.authorization) {
+      return res.status(403).json({ error: "No credentials sent!" });
+    }
+    try {
+      admin
+        .auth()
+        .verifyIdToken(req.headers.authorization)
+        .then(async (decodedToken) => {
+          const uid = decodedToken.uid;
+          let query = db.collection("users").doc(uid).collection("fridges");
+          let response = [];
+          await query.get().then((querySnapshot) => {
+            let docs = querySnapshot.docs;
+            for (let doc of docs) {
+              const selectedItem = {
+                id: doc.id,
+                name: doc.data().name,
+                bestBefore: doc.data().bestBefore.toDate(),
+              };
+              response.push(selectedItem);
+            }
+            return;
+          });
+          return res.status(200).send(response);
+        })
+        .catch((error) => {
+          return res.status(401).json({ error: error });
+        });
     } catch (error) {
       console.log(error);
       return res.status(500).send(error);
