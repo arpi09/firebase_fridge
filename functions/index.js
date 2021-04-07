@@ -148,7 +148,7 @@ app.post("/api/user/fridge/:fridgeId/grocery", (req, res) => {
   })();
 });
 
-app.delete("/api/user/fridge/:fridgeId/grocery/:groceryId", (req, res) => {
+app.delete("/api/user/fridge/:fridgeId/grocery", (req, res) => {
   (async () => {
     if (!req.headers.authorization) {
       return res.status(403).json({ error: "No credentials sent!" });
@@ -161,15 +161,18 @@ app.delete("/api/user/fridge/:fridgeId/grocery/:groceryId", (req, res) => {
           const uid = decodedToken.uid;
           const date = new Date("2015-08-25T15:35:58.000Z");
           try {
-            //Delete grocery
-            await db
-              .collection("users")
-              .doc(uid)
-              .collection("fridges")
-              .doc(req.params.fridgeId)
-              .collection("groceries")
-              .doc(req.params.groceryId)
-              .delete();
+            //Delete groceries
+            console.log(req.body.groceries);
+            req.body.groceries.forEach(async function (item, index) {
+              await db
+                .collection("users")
+                .doc(uid)
+                .collection("fridges")
+                .doc(req.params.fridgeId)
+                .collection("groceries")
+                .doc(item)
+                .delete();
+            });
 
             let response = {};
 
