@@ -24,41 +24,7 @@ app.get("/api/user/fridge/:fridgeId", (req, res) => {
         .then(async (decodedToken) => {
           const uid = decodedToken.uid;
 
-          let response = {};
-
-          //Get fridge data
-          let queryFridge = db
-            .collection("users")
-            .doc(uid)
-            .collection("fridges")
-            .doc(req.params.fridgeId);
-          await queryFridge.get().then((querySnapshot) => {
-            response = querySnapshot.data();
-            return;
-          });
-
-          //Get groceries for fridge
-          let groceries = [];
-
-          let queryGroceries = db
-            .collection("users")
-            .doc(uid)
-            .collection("fridges")
-            .doc(req.params.fridgeId)
-            .collection("groceries");
-          await queryGroceries.get().then((querySnapshot) => {
-            let docs = querySnapshot.docs;
-            for (let doc of docs) {
-              const selectedItem = {
-                id: doc.id,
-                name: doc.data().name,
-                bestBefore: doc.data().bestBefore.toDate(),
-              };
-              groceries.push(selectedItem);
-            }
-            return;
-          });
-          response.groceries = groceries;
+          const response = await getFridgeData(req.params.fridgeId, uid);
 
           return res.status(200).send(response);
         })
@@ -98,41 +64,7 @@ app.post("/api/user/fridge/:fridgeId/grocery", (req, res) => {
                 ),
               });
 
-            let response = {};
-
-            //Get fridge data
-            let queryFridge = db
-              .collection("users")
-              .doc(uid)
-              .collection("fridges")
-              .doc(req.params.fridgeId);
-            await queryFridge.get().then((querySnapshot) => {
-              response = querySnapshot.data();
-              return;
-            });
-
-            //Get groceries for fridge
-            let groceries = [];
-
-            let queryGroceries = db
-              .collection("users")
-              .doc(uid)
-              .collection("fridges")
-              .doc(req.params.fridgeId)
-              .collection("groceries");
-            await queryGroceries.get().then((querySnapshot) => {
-              let docs = querySnapshot.docs;
-              for (let doc of docs) {
-                const selectedItem = {
-                  id: doc.id,
-                  name: doc.data().name,
-                  bestBefore: doc.data().bestBefore.toDate(),
-                };
-                groceries.push(selectedItem);
-              }
-              return;
-            });
-            response.groceries = groceries;
+            const response = await getFridgeData(req.params.fridgeId, uid);
 
             return res.status(200).send(response);
           } catch (error) {
@@ -159,10 +91,9 @@ app.delete("/api/user/fridge/:fridgeId/grocery", (req, res) => {
         .verifyIdToken(req.headers.authorization)
         .then(async (decodedToken) => {
           const uid = decodedToken.uid;
-          const date = new Date("2015-08-25T15:35:58.000Z");
+
           try {
             //Delete groceries
-            console.log(req.body.groceries);
             req.body.groceries.forEach(async function (item, index) {
               await db
                 .collection("users")
@@ -174,41 +105,7 @@ app.delete("/api/user/fridge/:fridgeId/grocery", (req, res) => {
                 .delete();
             });
 
-            let response = {};
-
-            //Get fridge data
-            let queryFridge = db
-              .collection("users")
-              .doc(uid)
-              .collection("fridges")
-              .doc(req.params.fridgeId);
-            await queryFridge.get().then((querySnapshot) => {
-              response = querySnapshot.data();
-              return;
-            });
-
-            //Get groceries for fridge
-            let groceries = [];
-
-            let queryGroceries = db
-              .collection("users")
-              .doc(uid)
-              .collection("fridges")
-              .doc(req.params.fridgeId)
-              .collection("groceries");
-            await queryGroceries.get().then((querySnapshot) => {
-              let docs = querySnapshot.docs;
-              for (let doc of docs) {
-                const selectedItem = {
-                  id: doc.id,
-                  name: doc.data().name,
-                  bestBefore: doc.data().bestBefore.toDate(),
-                };
-                groceries.push(selectedItem);
-              }
-              return;
-            });
-            response.groceries = groceries;
+            const response = await getFridgeData(req.params.fridgeId, uid);
 
             return res.status(200).send(response);
           } catch (error) {
@@ -239,6 +136,7 @@ app.get("/api/user/fridges", (req, res) => {
             .collection("users")
             .doc(uid)
             .collection("fridges");
+            
           let response = [];
 
           await query.get().then((querySnapshot) => {
@@ -262,5 +160,84 @@ app.get("/api/user/fridges", (req, res) => {
     }
   })();
 });
+
+app.put("/api/user/fridge/:fridgeId/grocery", (req, res) => {
+  (async () => {
+    if (!req.headers.authorization) {
+      return res.status(403).json({ error: "No credentials sent!" });
+    }
+    try {
+      admin
+        .auth()
+        .verifyIdToken(req.headers.authorization)
+        .then(async (decodedToken) => {
+          const uid = decodedToken.uid;
+          try {
+            //Update grocery
+            await db
+              .collection("users")
+              .doc(uid)
+              .collection("fridges")
+              .doc(req.params.fridgeId)
+              .collection("groceries")
+              .doc(req.body.grocery.id)
+              .update(req.body.grocery);
+
+            const response = await getFridgeData(req.params.fridgeId, uid);
+
+            return res.status(200).send(response);
+          } catch (error) {
+            return res.status(500).send(error);
+          }
+        })
+        .catch((error) => {
+          return res.status(401).json({ error: error });
+        });
+    } catch (error) {
+      return res.status(500).send(error);
+    }
+  })();
+});
+
+const getFridgeData = async (fridgeId, uid) => {
+  let response = {};
+
+  //Get fridge data
+  let queryFridge = db
+    .collection("users")
+    .doc(uid)
+    .collection("fridges")
+    .doc(fridgeId);
+  await queryFridge.get().then((querySnapshot) => {
+    response = querySnapshot.data();
+    return;
+  });
+
+  //Get groceries for fridge
+  let groceries = [];
+
+  let queryGroceries = db
+    .collection("users")
+    .doc(uid)
+    .collection("fridges")
+    .doc(fridgeId)
+    .collection("groceries");
+  await queryGroceries.get().then((querySnapshot) => {
+    let docs = querySnapshot.docs;
+    for (let doc of docs) {
+      const selectedItem = {
+        id: doc.id,
+        name: doc.data().name,
+        bestBefore: doc.data().bestBefore.toDate(),
+        amount: doc.data().amount,
+      };
+      groceries.push(selectedItem);
+    }
+    return;
+  });
+  response.groceries = groceries;
+
+  return response;
+};
 
 exports.app = functions.https.onRequest(app);
