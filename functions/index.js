@@ -12,6 +12,7 @@ admin.initializeApp({
 });
 const db = admin.firestore();
 
+//Get fridge for user
 app.get("/api/user/fridge/:fridgeId", (req, res) => {
   (async () => {
     if (!req.headers.authorization) {
@@ -37,6 +38,7 @@ app.get("/api/user/fridge/:fridgeId", (req, res) => {
   })();
 });
 
+//Create grocery in fridge for user
 app.post("/api/user/fridge/:fridgeId/grocery", (req, res) => {
   (async () => {
     if (!req.headers.authorization) {
@@ -49,6 +51,8 @@ app.post("/api/user/fridge/:fridgeId/grocery", (req, res) => {
         .then(async (decodedToken) => {
           const uid = decodedToken.uid;
 
+          console.log(req.body.bestBefore);
+
           try {
             //Add grocery
             await db
@@ -60,8 +64,11 @@ app.post("/api/user/fridge/:fridgeId/grocery", (req, res) => {
               .add({
                 name: req.body.name,
                 bestBefore: admin.firestore.Timestamp.fromDate(
-                  new Date("2020-01-01T00:00:00.000Z")
+                  new Date(req.body.bestBefore)
                 ),
+                amount: 100,
+                amountType: req.body.amountType,
+                fullAmount: req.body.fullAmount,
               });
 
             const response = await getFridgeData(req.params.fridgeId, uid);
@@ -80,6 +87,7 @@ app.post("/api/user/fridge/:fridgeId/grocery", (req, res) => {
   })();
 });
 
+//Delete groceries in fridge for user
 app.delete("/api/user/fridge/:fridgeId/grocery", (req, res) => {
   (async () => {
     if (!req.headers.authorization) {
@@ -121,6 +129,7 @@ app.delete("/api/user/fridge/:fridgeId/grocery", (req, res) => {
   })();
 });
 
+//Get fridges for user
 app.get("/api/user/fridges", (req, res) => {
   (async () => {
     if (!req.headers.authorization) {
@@ -136,7 +145,7 @@ app.get("/api/user/fridges", (req, res) => {
             .collection("users")
             .doc(uid)
             .collection("fridges");
-            
+
           let response = [];
 
           await query.get().then((querySnapshot) => {
@@ -161,6 +170,7 @@ app.get("/api/user/fridges", (req, res) => {
   })();
 });
 
+//Update grocery in fridge for user
 app.put("/api/user/fridge/:fridgeId/grocery", (req, res) => {
   (async () => {
     if (!req.headers.authorization) {
@@ -199,6 +209,7 @@ app.put("/api/user/fridge/:fridgeId/grocery", (req, res) => {
   })();
 });
 
+//Helpers
 const getFridgeData = async (fridgeId, uid) => {
   let response = {};
 
