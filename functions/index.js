@@ -241,6 +241,8 @@ const getFridgeData = async (fridgeId, uid) => {
         name: doc.data().name,
         bestBefore: doc.data().bestBefore.toDate(),
         amount: doc.data().amount,
+        fullAmount: doc.data().fullAmount,
+        amountType: doc.data().amountType,
       };
       groceries.push(selectedItem);
     }
